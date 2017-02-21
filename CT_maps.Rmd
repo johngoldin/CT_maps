@@ -1,0 +1,61 @@
+---
+title: "Connecticut_Mapping"
+author: "John Goldin"
+date: "February 19, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(rgdal)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(ggmap)
+library(curl)
+```
+```{r ctdata}
+ctpop <- read.csv("brr2000v04_townbyasrh.csv")
+ctpop <- filter(ctpop, str_length(town) < 100, str_length(age_group) > 0)
+ctpop$town <- str_replace(ctpop$town, "\n", "") # north stonington had a newline character
+last_town <- ""
+for(i in 1:length(ctpop$town)) {
+  if(ctpop$town[i] == "") ctpop$town[i] <- last_town
+  else last_town <- ctpop$town[i]
+}
+ctpop_race <- group_by(ctpop, town) %>% summarize(white = sum(males_white_non_hispanic + females_white_non_hispanic),
+                                          black = sum(males_black + females_black),
+                                          asian = sum(males_pac_islander + females_pac_islander),
+                                          hispanic = sum(males_hispanic + females_hispanic),
+                                          total = white + black + asian + hispanic,
+                                          white_pct = white / total,
+                                          black_pct = black / total,
+                                          asian_pct = asian / total,
+                                          hispanic_pct = hispanic / total)
+
+```
+```{r}
+rc <- curl_download("http://www.ct.gov/opm/lib/opm/igp/mill_rates/fy_2017_mill_rates.xlsx", "mill_rates2015.xlsx")
+mill_rates <- read_excel("mill_rates2015.xlsx")
+names(mill_rates) <- c("code", "service_district_code", "Municipality", "FY2017_mill_rate", "personal_prop_rate", "motor_vehicle_rate") 
+```
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
